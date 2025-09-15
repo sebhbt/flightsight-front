@@ -1,0 +1,168 @@
+<div class="container my-5">
+    <!-- Return home button -->
+    <div class="mb-3">
+        <a [routerLink]="['/']" class="btn btn-primary">
+            <i class="bi bi-arrow-left"></i> Retour à l'accueil
+        </a>
+    </div>
+    @if (loadingFlight()) {
+    <div class="d-flex justify-content-center my-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Chargement...</span>
+        </div>
+    </div>
+    }
+    @else if (errorFlight()) {
+    <div class="alert alert-danger">{{ errorFlight() }}</div>
+    }
+    @else {
+    <!-- Flight details -->
+    <div class="card">
+        <div class="card-header">
+            <h2>Détails du vol {{ flight()?.flightNumber }}</h2>
+        </div>
+        <div class="card-body">
+            <dl class="row">
+                <dt class="col-sm-3">Compagnie</dt>
+                <dd class="col-sm-9">{{ flight()?.airline }}</dd>
+
+                <dt class="col-sm-3">Numéro de vol</dt>
+                <dd class="col-sm-9">{{ flight()?.flightNumber }}</dd>
+
+                <dt class="col-sm-3">Aéroport de départ</dt>
+                <dd class="col-sm-9">{{ flight()?.departureAirport }}</dd>
+
+                <dt class="col-sm-3">Aéroport d'arrivée</dt>
+                <dd class="col-sm-9">{{ flight()?.arrivalAirport }}</dd>
+
+                <dt class="col-sm-3">Heure de départ</dt>
+                <dd class="col-sm-9">{{ flight()?.departureDatetime | date:'dd/MM/yyyy HH:mm' }}</dd>
+
+                <dt class="col-sm-3">Heure d'arrivée</dt>
+                <dd class="col-sm-9">{{ flight()?.arrivalDatetime | date:'dd/MM/yyyy HH:mm' }}</dd>
+            </dl>
+        </div>
+    </div>
+    }
+    <!-- Form to post a review -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h3>Ajouter un avis</h3>
+        </div>
+        <div class="card-body">
+            <form [formGroup]="reviewForm" (ngSubmit)="onSubmit()">
+
+                <!-- Review title -->
+                <div class="mb-3">
+                    <label for="title" class="form-label">Titre</label>
+                    <input type="text" class="form-control" id="title" formControlName="title"
+                        placeholder="Donnez un titre à votre avis">
+                    @if (reviewForm.get('title')?.invalid && reviewForm.get('title')?.touched) {
+                    <div class="text-danger">
+                        @if (reviewForm.get('title')?.errors?.['required']) {
+                        <small>Le titre est requis.</small>
+                        }
+                        @if (reviewForm.get('title')?.errors?.['maxlength']) {
+                        <small>Le titre ne doit pas dépasser 50 caractères.</small>
+                        }
+                    </div>
+                    }
+                </div>
+
+                <!-- Review comment -->
+                <div class="mb-3">
+                    <label for="comment" class="form-label">Commentaire</label>
+                    <textarea class="form-control" id="comment" formControlName="comment" rows="3"
+                        placeholder="Partagez votre expérience"></textarea>
+                    @if (reviewForm.get('comment')?.invalid && reviewForm.get('comment')?.touched) {
+                    <div class="text-danger">
+                        @if (reviewForm.get('comment')?.errors?.['required']) {
+                        <small>Le commentaire est requis.</small>
+                        }
+                        @if (reviewForm.get('comment')?.errors?.['maxlength']) {
+                        <small>Le commentaire ne doit pas dépasser 500 caractères.</small>
+                        }
+                    </div>
+                    }
+                </div>
+
+                <!-- Review Rating -->
+                <div class="mb-3">
+                    <label class="form-label">Note sur 10</label>
+                    <div class="d-flex align-items-center">
+                        <div class="star-rating">
+                            @for (star of [1, 2, 3, 4, 5]; track star; let i = $index) {
+                            <span (click)="rate(i + 1)" style="position: relative; display: inline-block;">
+                                <i class="bi" [ngClass]="{
+                                    'bi-star-fill': star <= Math.floor(fullStars()),
+                                    'bi-star-half': star - 0.5 === fullStars(),
+                                    'bi-star': star > Math.ceil(fullStars())
+                                }" style="cursor: pointer; font-size: 2rem; color: gold;">
+                                </i>
+                                <span (click)="rate(i + 0.5); $event.stopPropagation()"
+                                    style="position: absolute; width: 50%; height: 100%; top: 0; left: 0; cursor: pointer;"></span>
+                            </span>
+                            }
+                        </div>
+                        <span>{{ fullStars() }}/5</span>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary" [disabled]="reviewForm.invalid">
+                    <i class="bi bi-send me-2"></i> Soumettre l'avis
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- List all the reviews on this flight -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h3>Avis des voyageurs</h3>
+        </div>
+        <div class="card-body">
+            @if (loadingReviews()) {
+            <div class="d-flex justify-content-center my-3">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Chargement...</span>
+                </div>
+            </div>
+            }
+            @else if (errorReviews()) {
+            <div class="alert alert-warning">{{ errorReviews() }}</div>
+            }
+            @else {
+            @if (reviews().length === 0) {
+            <div class="alert alert-info">Aucun avis pour ce vol.</div>
+            }
+            @else {
+            @for (review of reviews(); track review.id) {
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="card-title mb-0">{{ review.title }}</h5>
+                        <div class="star-rating">
+                            @for (star of [1, 2, 3, 4, 5]; track star; let i = $index) {
+                            <span style="position: relative; display: inline-block;">
+                                <i class="bi" [ngClass]="{
+                                    'bi-star-fill': star <= Math.floor(review.rating / 2),
+                                    'bi-star-half': star - 0.5 === review.rating / 2,
+                                    'bi-star': star > Math.ceil(review.rating / 2)
+                                }">
+                                </i>
+                            </span>
+                            }
+                        </div>
+                    </div>
+                    <p class="card-text">{{ review.comment }}</p>
+                    <div class="text-muted small">
+                        Posté le {{ review.createdAt | date:'dd/MM/yyyy HH:mm' }}
+                    </div>
+                </div>
+            </div>
+            }
+            }
+            }
+        </div>
+    </div>
+</div>
